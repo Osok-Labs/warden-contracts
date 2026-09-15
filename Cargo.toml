@@ -3,6 +3,8 @@ resolver = "2"
 members = [
   "warden-smart-account",
   "policies/threshold-policy",
+  "policies/session-policy",
+  "policies/spending-limit-policy",
 ]
 
 [workspace.dependencies]

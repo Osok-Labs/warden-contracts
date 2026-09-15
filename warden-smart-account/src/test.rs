@@ -209,3 +209,53 @@ fn remove_signer_succeeds_zeroing_out_when_other_signers_remain_on_rule() {
     let rule = client.get_context_rule(&0);
     assert_eq!(rule.signers.len(), 1);
 }
+
+// ################## SAME FIX, AGAINST A REAL POLICY (not a mock) ##################
+//
+// The tests above use `OpaquePolicyContract`, a minimal stand-in. This one
+// reproduces the exact scenario against the real, shipped `session-policy`
+// crate -- the same policy a real session-key rule would use -- to confirm
+// the fix isn't just satisfying a mock's shape.
+
+use session_policy::{SessionAccountParams, SessionPolicy};
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn remove_signer_blocked_when_it_would_zero_out_a_real_session_policy_rule() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let owner_signers = default_signers(&env);
+    let owner_policies = Map::new(&env);
+    let (_account_id, client) = register_account(&env, &owner_signers, &owner_policies);
+
+    // A CallContract session rule with exactly one session-key signer and a
+    // real session-policy installed -- the standard Warden/Latch session-key
+    // shape. session-policy has no would_remain_reachable, same as the mock
+    // above, but this is the actual policy code, not a stand-in.
+    let target_id = Address::generate(&env);
+    let session_signer = Signer::Delegated(Address::generate(&env));
+    let session_signers = vec![&env, session_signer];
+    let rule = client.add_context_rule(
+        &ContextRuleType::CallContract(target_id),
+        &String::from_str(&env, "session"),
+        &None,
+        &session_signers,
+        &Map::new(&env),
+    );
+
+    let session_policy_id = env.register(SessionPolicy, ());
+    let install_param: Val = SessionAccountParams {
+        allowed_fns: vec![&env, soroban_sdk::symbol_short!("transfer")],
+    }
+    .into_val(&env);
+    client.add_policy(&rule.id, &session_policy_id, &install_param);
+
+    // Removing the rule's only signer would zero it out while session-policy
+    // stays attached -- session-policy's own `enforce` unconditionally
+    // rejects an empty authenticated_signers list, so this would be a
+    // permanent lockout on this session rule. Must be blocked.
+    let rule = client.get_context_rule(&rule.id);
+    let session_signer_id = rule.signer_ids.get(0).unwrap();
+    client.remove_signer(&rule.id, &session_signer_id);
+}
