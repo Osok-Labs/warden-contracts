@@ -47,7 +47,7 @@ parameter — callers use `batch_add_signer` even for one signer.
 | `warden-smart-account` | ✅ Zero-signer / unreachable-threshold lockout fix, 7 passing tests (including a regression replay against the real `session-policy` crate, not just a mock) |
 | `policies/threshold-policy` | ✅ Thin wrapper over OZ `simple_threshold`; implements `would_remain_reachable`; tested |
 | `policies/session-policy` | ✅ Wrapped, tested (14 tests) — opaque to reachability, covered by branch 2 above |
-| `policies/spending-limit-policy` | ⚠️ Wrapped, **not yet tested** — opaque to reachability, covered by branch 2 above |
+| `policies/spending-limit-policy` | ✅ Wrapped, tested (17 tests) — opaque to reachability, covered by branch 2 above |
 | `policies/weighted-threshold-policy` | ⬜ Not started |
 | `policies/time-window-policy` | ⬜ Not started — new policy |
 | `policies/call-count-limit-policy` | ⬜ Not started — new policy |
