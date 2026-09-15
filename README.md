@@ -133,6 +133,14 @@ choose to authenticate and the best case is all of them. No search space, no cap
    decision: policy calls back into the account to re-validate, or the account gets an
    event-triggered post-mutation sweep.
 
+## Deployments
+
+`deployments/testnet.json` — addresses and WASM hashes for what's live on Stellar testnet so far:
+`threshold-policy` (shared singleton) and a demo `warden-smart-account` instance (single delegated
+signer, no policies, deployed directly since `account-factory` doesn't exist yet). This is what
+`warden-backend`'s indexer and `warden-frontend`'s account viewer point at for their own first
+milestones.
+
 ## Related repos
 
 Part of the Warden project — [`warden-backend`](https://github.com/Osok-Labs/warden-backend)

@@ -1,0 +1,18 @@
+{
+  "network": "testnet",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "rpcUrl": "https://soroban-testnet.stellar.org/",
+  "deployedAt": "2026-09-15",
+  "contracts": {
+    "threshold-policy": {
+      "wasmHash": "1b47a6291002ba38e735ba7f582dfa42aad66e4afaa9ccef8fccab096dab6a78",
+      "address": "CDNXK75JQ6XPPBB525IVZ57XWQZ5IM6ZB53HUCSCNZYZHUVM64QHKN4S",
+      "note": "Singleton, shared across accounts once installed."
+    },
+    "warden-smart-account-demo": {
+      "wasmHash": "4065a9661cebb7fd2a23c4a39fb91690edb67ce1baf6c9658f53a3e850d39303",
+      "address": "CCBXMG3RJUQUW6RNONDSLQUKL6P7YIYR6T56BCXLECMPA3TVCASAABOG",
+      "note": "Demo instance for backend/frontend bring-up, deployed directly (no account-factory yet). Single signer: Signer::Delegated(GB5BSCPCWGXFKQO3DFMGMNEHUXCPHTFOPOBA67J5F33IIIDLO3LWUXRY), no policies installed on the default context rule."
+    }
+  }
+}
