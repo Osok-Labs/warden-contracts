@@ -141,6 +141,12 @@ signer, no policies, deployed directly since `account-factory` doesn't exist yet
 `warden-backend`'s indexer and `warden-frontend`'s account viewer point at for their own first
 milestones.
 
+## Issue backlog
+
+[`issues.md`](./issues.md) — 125 scoped issues across all three Warden repos (55 here, 40 in
+`warden-backend`, 30 in `warden-frontend`), sized with Drips' Trivial/Medium/High complexity tiers
+for seeding GitHub Issues.
+
 ## Related repos
 
 Part of the Warden project — [`warden-backend`](https://github.com/Osok-Labs/warden-backend)
