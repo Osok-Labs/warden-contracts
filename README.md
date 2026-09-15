@@ -136,4 +136,4 @@ it only through those published artifacts — never a shared repo or shared secr
 
 ## License
 
-TBD — Latch is MIT; likely the same here unless a reason emerges not to.
+[MIT](./LICENSE) — same as Latch.
