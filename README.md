@@ -44,11 +44,11 @@ parameter — callers use `batch_add_signer` even for one signer.
 
 | Crate | State |
 |---|---|
-| `warden-smart-account` | ✅ Zero-signer / unreachable-threshold lockout fix, 7 passing tests (including a regression replay against the real `session-policy` crate, not just a mock) |
-| `policies/threshold-policy` | ✅ Thin wrapper over OZ `simple_threshold`; implements `would_remain_reachable`; tested |
+| `warden-smart-account` | ✅ Zero-signer / unreachable-threshold lockout fix, 9 passing tests (including regression replays against the real `session-policy` and `weighted-threshold-policy` crates, not just a mock) |
+| `policies/threshold-policy` | ✅ Thin wrapper over OZ `simple_threshold`; implements `would_remain_reachable`; tested (2 tests) |
+| `policies/weighted-threshold-policy` | ✅ Thin wrapper over OZ `weighted_threshold`; implements `would_remain_reachable`; tested (16 tests, plus 2 real-crate integration tests in `warden-smart-account`) |
 | `policies/session-policy` | ✅ Wrapped, tested (14 tests) — opaque to reachability, covered by branch 2 above |
 | `policies/spending-limit-policy` | ✅ Wrapped, tested (17 tests) — opaque to reachability, covered by branch 2 above |
-| `policies/weighted-threshold-policy` | ⬜ Not started |
 | `policies/time-window-policy` | ⬜ Not started — new policy |
 | `policies/call-count-limit-policy` | ⬜ Not started — new policy |
 | `policies/approval-delay-policy` | ⬜ Not started — new policy |
@@ -70,9 +70,9 @@ warden-contracts/
 │   └── webauthn-verifier/
 ├── policies/
 │   ├── threshold-policy/            # ✅
-│   ├── weighted-threshold-policy/
+│   ├── weighted-threshold-policy/   # ✅
 │   ├── session-policy/              # ✅
-│   ├── spending-limit-policy/       # ✅ wrapped, untested
+│   ├── spending-limit-policy/       # ✅
 │   ├── time-window-policy/          # new
 │   ├── call-count-limit-policy/     # new
 │   └── approval-delay-policy/       # new
@@ -115,13 +115,19 @@ cd <crate> && cargo clippy --all-targets --all-features -- -D warnings
 cd <crate> && stellar contract build
 ```
 
+## Resolved questions
+
+**`weighted-threshold-policy`'s `would_remain_reachable` cost.** The original design sketch
+(`min_signers_required`, "smallest signer count whose weight meets threshold") would have been
+knapsack-shaped and needed benchmarking. The mechanism that actually shipped only asks "is the
+maximum possible remaining weight still >= the threshold" — a single O(n) sum over the installed
+`signer_weights` map with the removed signer excluded, since `enforce` accepts whichever signers
+choose to authenticate and the best case is all of them. No search space, no cap needed. See
+`policies/weighted-threshold-policy/src/lib.rs`.
+
 ## Open questions
 
-1. **`weighted-threshold-policy`'s `would_remain_reachable` cost.** Computing "smallest signer
-   count whose weight meets threshold" is knapsack-shaped; needs benchmarking before assuming it's
-   cheap enough to run on every mutation inside a contract with real per-invocation resource
-   limits — may need a signer-count cap.
-2. **Where threshold changes actually live.** `set_threshold` / `set_signer_weight` are exposed by
+1. **Where threshold changes actually live.** `set_threshold` / `set_signer_weight` are exposed by
    the *policy* contracts today, not the account, so a threshold shrink made directly through the
    policy contract isn't caught by the account-side `remove_signer` override above. Needs a
    decision: policy calls back into the account to re-validate, or the account gets an

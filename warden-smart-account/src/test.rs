@@ -7,7 +7,10 @@ use soroban_sdk::{
     Env, IntoVal, Map, String, Val, Vec,
 };
 use stellar_accounts::{
-    policies::{simple_threshold::SimpleThresholdAccountParams, Policy},
+    policies::{
+        simple_threshold::SimpleThresholdAccountParams,
+        weighted_threshold::WeightedThresholdAccountParams, Policy,
+    },
     smart_account::{ContextRuleType, Signer},
 };
 
@@ -134,6 +137,84 @@ fn remove_signer_blocked_when_threshold_would_become_unreachable() {
 
     env.mock_all_auths();
     client.remove_signer(&0, &0);
+}
+
+// ################## SAME FIX, AGAINST THE REAL weighted-threshold-policy ##################
+//
+// threshold-policy's `would_remain_reachable` only ever needs a signer
+// count, since every signer counts as 1. weighted-threshold-policy's
+// version reads the removed signer's own configured weight instead -- this
+// exercises that path against the real deployed crate, not a mock, so a
+// bug in how the smart account decodes/forwards the probe's `Signer`
+// argument would show up here.
+
+fn setup_with_weighted_threshold<'a>(
+    env: &'a Env,
+    weighted_signers: &[(Signer, u32)],
+    threshold: u32,
+) -> (Address, WardenSmartAccountClient<'a>) {
+    env.mock_all_auths();
+
+    let mut signers = Vec::new(env);
+    for (signer, _) in weighted_signers {
+        signers.push_back(signer.clone());
+    }
+    let policies = Map::new(env);
+    let (account_id, client) = register_account(env, &signers, &policies);
+
+    let mut signer_weights = Map::new(env);
+    for (signer, weight) in weighted_signers {
+        signer_weights.set(signer.clone(), *weight);
+    }
+
+    let weighted_policy_id = env.register(weighted_threshold_policy::WeightedThresholdPolicy, ());
+    let install_param: Val = WeightedThresholdAccountParams {
+        signer_weights,
+        threshold,
+    }
+    .into_val(env);
+    client.add_policy(&0, &weighted_policy_id, &install_param);
+
+    (account_id, client)
+}
+
+#[test]
+fn remove_signer_succeeds_when_weighted_threshold_still_reachable() {
+    let env = Env::default();
+    let ceo = Signer::Delegated(Address::generate(&env));
+    let cto = Signer::Delegated(Address::generate(&env));
+    let cfo = Signer::Delegated(Address::generate(&env));
+    // CEO(100) + CTO(75) + CFO(75), threshold=150. Removing the CFO leaves
+    // CEO+CTO = 175 >= 150 -> still reachable.
+    let (_account_id, client) =
+        setup_with_weighted_threshold(&env, &[(ceo, 100), (cto, 75), (cfo, 75)], 150);
+
+    env.mock_all_auths();
+    let rule = client.get_context_rule(&0);
+    let cfo_id = rule.signer_ids.get(2).unwrap();
+    client.remove_signer(&0, &cfo_id);
+
+    let rule = client.get_context_rule(&0);
+    assert_eq!(rule.signers.len(), 2);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #1)")]
+fn remove_signer_blocked_when_weighted_threshold_would_become_unreachable() {
+    let env = Env::default();
+    let ceo = Signer::Delegated(Address::generate(&env));
+    let cto = Signer::Delegated(Address::generate(&env));
+    let cfo = Signer::Delegated(Address::generate(&env));
+    // CEO(100) + CTO(75) + CFO(75), threshold=150. Removing the CEO leaves
+    // CTO+CFO = 150, which is exactly reachable -- so tighten the threshold
+    // to 151 first: now removing the CEO leaves 150 < 151 -> blocked.
+    let (_account_id, client) =
+        setup_with_weighted_threshold(&env, &[(ceo, 100), (cto, 75), (cfo, 75)], 151);
+
+    env.mock_all_auths();
+    let rule = client.get_context_rule(&0);
+    let ceo_id = rule.signer_ids.get(0).unwrap();
+    client.remove_signer(&0, &ceo_id);
 }
 
 // ################## ZERO-SIGNER LOCKOUT (the fix this repo adds) ##################

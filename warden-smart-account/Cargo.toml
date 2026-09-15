@@ -17,5 +17,6 @@ stellar-contract-utils = { workspace = true }
 soroban-sdk = { workspace = true, features = ["testutils"] }
 stellar-accounts = { workspace = true }
 threshold-policy = { path = "../policies/threshold-policy" }
+weighted-threshold-policy = { path = "../policies/weighted-threshold-policy" }
 session-policy = { path = "../policies/session-policy" }
 spending-limit-policy = { path = "../policies/spending-limit-policy" }
